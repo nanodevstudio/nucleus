@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "incremental": false,
+    "lib": [
+      "es2017",
+      "dom",
+      "es2019"
+    ],
+    "target": "es2017",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "src",
+    "plugins": [
+      {
+        "transform": "@zerollup/ts-transform-paths"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "*"
+      ]
+    },
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
+    "declaration": true,
+    "outDir": "lib",
+    "rootDir": "src",
+    "allowJs": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js"
+  ]
+}
