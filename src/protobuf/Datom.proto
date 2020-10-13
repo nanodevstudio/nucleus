@@ -1,0 +1,12 @@
+message Datom {
+  required fixed64 e = 1;
+  required uint64 a = 2;
+  required uint64 t = 3;
+  oneof v {
+    bool bool = 4;
+    fixed64 fixed64 = 5;
+    int64 int64 = 6;
+    string string = 7;
+    bytes bytes = 8;
+  };
+}

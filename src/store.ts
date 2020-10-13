@@ -1,5 +1,5 @@
-import { Datom, IndexNode } from "./types";
+import { Datom, DB } from "./types";
 
-export const writeDatoms = (index: IndexNode, values: Datom[]) => {
-  return index.write(values);
+export const writeDatoms = (db: DB, values: Datom[]) => {
+  return db.writeDatoms(values);
 };

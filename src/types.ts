@@ -5,7 +5,7 @@ export enum NodeType {
 
 export class Datom {
   constructor(
-    public e: BigInteger,
+    public e: bigint,
     public a: number,
     public v: any,
     public t: number
@@ -20,29 +20,36 @@ export type MaybePromise<T> = T | Promise<T>;
 
 export interface DataNode {
   type: NodeType.data;
-  getData: (start?: Datom, end?: Datom) => MaybePromise<Datom[]>;
+  getData: (start?: Datom, end?: Datom) => Datom[];
+}
+
+export interface Pointer {
+  max: Datom;
+  pointer: Buffer;
 }
 
 export interface IndexNode {
   type: NodeType.index;
-  findNextNode: (key: Datom) => number;
+  findNextNode: (key: Datom) => number | null;
   findFirstNode: () => number;
   findLastNode: () => number;
+  getIndexDatom: (index: number) => Datom;
   getNode: (index: number) => MaybePromise<GeneralNode | null>;
-  write: (datoms: Datom[]) => Promise<IndexNode>;
+  getPointers: () => Pointer[];
 }
 
 export type GeneralNode = DataNode | IndexNode;
 
 export enum DataIndex {
-  EAVT = 1,
-  AEVT = 2,
-  AVET = 3,
-  VAET = 4,
+  EAVT = 0,
+  AEVT = 1,
+  AVET = 2,
+  VAET = 3,
 }
 
-export interface DB {
-  getIndex: (index: DataIndex) => IndexNode;
+export interface Snapshot {
+  writeDatoms: (datoms: Datom[]) => MaybePromise<Snapshot>;
+  getIndex: (index: DataIndex) => MaybePromise<DataNode | IndexNode | null>;
 }
 
 export interface KVEntry {
@@ -54,10 +61,31 @@ export interface KVBackend {
   put(entries: KVEntry[]): MaybePromise<void>;
   get(key: Buffer): MaybePromise<Buffer>;
   getAll(keys: Buffer[]): MaybePromise<Buffer>;
+  getPointer(): MaybePromise<Buffer>;
 }
 
 export interface DBHead {
   backend: KVBackend;
   getIndexKey: (key: DataIndex) => MaybePromise<Buffer>;
   setIndexKey: (key: DataIndex, value: Buffer) => MaybePromise<DBHead>;
+}
+
+export interface IndexComparator {
+  compare: (a: Datom, b: Datom) => 0 | -1 | 1;
+  index: DataIndex;
+}
+
+export interface Indexer {
+  writeDatoms(
+    backend: KVBackend,
+    comparator: IndexComparator,
+    pointer: Buffer | null,
+    sortedDatoms: Datom[]
+  ): MaybePromise<Buffer>;
+
+  getNode(
+    backend: KVBackend,
+    comparator: IndexComparator,
+    pointer: Buffer
+  ): MaybePromise<IndexNode | DataNode>;
 }

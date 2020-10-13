@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate:protobuf": "pbjs -t static-module -w es6 --es6 -o src/generated/protocolBuffers.js src/hh-tree/HHIndexNodeData.proto"
+    "generate:protobuf": "pbjs -t static-module -w es6 --es6 -o src/generated/protocolBuffers.js src/protobuf/Root.proto && jscodeshift -t src/protobuf/un-iffy.js --no-dry src/generated/protocolBuffers.js"
   },
   "repository": {
     "type": "git",

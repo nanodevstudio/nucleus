@@ -1,4 +1,4 @@
-import { concatIters } from "./seq";
+import { chain, concatIters, isPromise } from "./async";
 import {
   DataIndex,
   Datom,
@@ -8,23 +8,6 @@ import {
   MaybePromise,
   NodeType,
 } from "./types";
-
-const isPromise = (value: any): value is Promise<any> => {
-  return value instanceof Promise;
-};
-
-const chain = <T, R>(
-  value: MaybePromise<T>,
-  result: (value: T) => MaybePromise<R>
-): MaybePromise<R> => {
-  if (isPromise(value)) {
-    return value.then((value) => {
-      return result(value);
-    });
-  }
-
-  return result(value);
-};
 
 class PromiseIterator<V> implements AsyncIterator<V> {
   iterator: AsyncIterator<V> | null;
@@ -77,9 +60,11 @@ const scanBetween = (
 
   const indexNode = node;
   const startIndex = start
-    ? indexNode.findNextNode(start)
+    ? indexNode.findNextNode(start) ?? indexNode.findFirstNode()
     : indexNode.findFirstNode();
-  const endIndex = end ? indexNode.findNextNode(end) : indexNode.findLastNode();
+  const endIndex = end
+    ? indexNode.findNextNode(end) ?? indexNode.findLastNode()
+    : indexNode.findLastNode();
 
   if (endIndex === startIndex) {
     return asIter(
@@ -109,7 +94,7 @@ const scanBetween = (
   return asIter(Promise.all(scans).then(concatIters));
 };
 
-export const scan = (db: DB, index: DataIndex, range: IndexRange) => {
+export const scan = async (db: DB, index: DataIndex, range: IndexRange) => {
   const indexNode = db.getIndex(index);
-  return scanBetween(indexNode, range.lower, range.upper);
+  return scanBetween(await indexNode, range.lower, range.upper);
 };

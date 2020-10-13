@@ -1,0 +1,15 @@
+message BPlusPointer {
+  required Datom max = 1;
+  required uint64 pointer = 2;
+}
+
+message BPlusIndexNodeData { repeated BPlusPointer pointers = 1; }
+
+message BPlusDataNodeData { repeated Datom data = 1; }
+
+message BPlusNode {
+  oneof value {
+    BPlusIndexNodeData index = 1;
+    BPlusDataNodeData data = 2;
+  }
+}

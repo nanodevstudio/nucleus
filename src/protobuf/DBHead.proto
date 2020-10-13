@@ -1,0 +1,7 @@
+
+message DBHeadData {
+  required fixed64 eavt = 1;
+  required fixed64 aevt = 2;
+  required fixed64 avet = 3;
+  required fixed64 vaet = 4;
+}
