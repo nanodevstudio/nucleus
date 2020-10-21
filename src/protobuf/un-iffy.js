@@ -1,5 +1,18 @@
+function isOneOfField(node) {
+  if (
+    node.type === "VariableDeclaration" &&
+    node.declarations[0].id.name === "$oneOfFields"
+  ) {
+    console.log("ran");
+    return true;
+  }
+
+  return false;
+}
+
 module.exports = (fileInfo, { jscodeshift }, options) => {
   const ast = jscodeshift(fileInfo.source);
+  let firstOneOf = false;
 
   ast.find(jscodeshift.ExportNamedDeclaration).forEach((path) => {
     if (path.node.declaration) {
@@ -10,13 +23,18 @@ module.exports = (fileInfo, { jscodeshift }, options) => {
         const fn = init.right.callee;
 
         if (fn.type === "ArrowFunctionExpression") {
-          const items = fn.body.body;
-          items.forEach((item) => {
-            if (item.type !== "ReturnStatement") {
-              path.insertAfter(item);
-            }
-          });
-
+          path.insertAfter(
+            jscodeshift.expressionStatement(
+              jscodeshift.assignmentExpression(
+                "=",
+                jscodeshift.memberExpression(
+                  jscodeshift.identifier("$root"),
+                  jscodeshift.identifier(decl.id.name)
+                ),
+                jscodeshift.identifier(decl.id.name)
+              )
+            )
+          );
           path.insertAfter({
             type: "ExportNamedDeclaration",
             declaration: null,
@@ -35,6 +53,27 @@ module.exports = (fileInfo, { jscodeshift }, options) => {
             ],
             source: null,
           });
+
+          const items = fn.body.body;
+
+          items
+            .slice()
+            .reverse()
+            .forEach((item) => {
+              if (isOneOfField(item)) {
+                if (!firstOneOf) {
+                  firstOneOf = true;
+                  path.insertAfter(item);
+                  return;
+                } else {
+                  return;
+                }
+              }
+
+              if (item.type !== "ReturnStatement") {
+                path.insertAfter(item);
+              }
+            });
 
           path.replace();
         }

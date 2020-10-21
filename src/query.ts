@@ -2,7 +2,7 @@ import { chain, concatIters, isPromise } from "./async";
 import {
   DataIndex,
   Datom,
-  DB,
+  Snapshot,
   GeneralNode,
   IndexRange,
   MaybePromise,
@@ -94,7 +94,11 @@ const scanBetween = (
   return asIter(Promise.all(scans).then(concatIters));
 };
 
-export const scan = async (db: DB, index: DataIndex, range: IndexRange) => {
+export const scan = async (
+  db: Snapshot,
+  index: DataIndex,
+  range: IndexRange
+) => {
   const indexNode = db.getIndex(index);
   return scanBetween(await indexNode, range.lower, range.upper);
 };

@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "generate:protobuf": "pbjs -t static-module -w es6 --es6 -o src/generated/protocolBuffers.js src/protobuf/Root.proto && jscodeshift -t src/protobuf/un-iffy.js --no-dry src/generated/protocolBuffers.js"
   },
   "repository": {
@@ -22,13 +22,18 @@
   },
   "homepage": "https://github.com/nanodevstudio/nucleus#readme",
   "devDependencies": {
+    "@babel/core": "^7.12.3",
+    "@babel/preset-env": "^7.12.1",
+    "@babel/preset-typescript": "^7.12.1",
     "@types/jest": "^26.0.14",
-    "jest": "^26.5.2",
+    "jest": "^26.5.3",
     "jscodeshift": "^0.11.0",
     "protobufjs": "^6.10.1",
     "typescript": "^4.0.3"
   },
   "dependencies": {
-    "level": "^6.0.1"
+    "@types/ramda": "^0.27.29",
+    "level": "^6.0.1",
+    "ramda": "^0.27.1"
   }
 }

@@ -6,6 +6,15 @@ export const concatIters = async function* <T>(values: AsyncIterable<T>[]) {
   }
 };
 
+export const fromAsyncIter = async <T>(value: AsyncIterable<T>) => {
+  const result: T[] = [];
+  for await (const item of value) {
+    result.push(item);
+  }
+
+  return result;
+};
+
 export const isPromise = (value: any): value is Promise<any> => {
   return value instanceof Promise;
 };

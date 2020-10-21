@@ -5,15 +5,15 @@ export enum NodeType {
 
 export class Datom {
   constructor(
-    public e: bigint,
-    public a: number,
-    public v: any,
-    public t: number
+    public e?: UINT64,
+    public a?: UINT64 | string,
+    public v?: any,
+    public t?: UINT64
   ) {}
 }
 
 export class IndexRange {
-  constructor(public upper: Datom, public lower: Datom) {}
+  constructor(public lower?: Datom, public upper?: Datom) {}
 }
 
 export type MaybePromise<T> = T | Promise<T>;
@@ -25,7 +25,7 @@ export interface DataNode {
 
 export interface Pointer {
   max: Datom;
-  pointer: Buffer;
+  pointer: Uint8Array;
 }
 
 export interface IndexNode {
@@ -47,27 +47,32 @@ export enum DataIndex {
   VAET = 3,
 }
 
-export interface Snapshot {
-  writeDatoms: (datoms: Datom[]) => MaybePromise<Snapshot>;
+export type UINT64 = bigint | number;
+
+export interface Clone<T> {
+  clone(): T;
+}
+
+export interface Snapshot extends Clone<Snapshot> {
+  indexer: Indexer;
   getIndex: (index: DataIndex) => MaybePromise<DataNode | IndexNode | null>;
 }
 
+export interface DB {
+  indexer: Indexer;
+  backend: KVBackend;
+}
+
 export interface KVEntry {
-  key: Buffer;
-  value: Buffer;
+  key: Uint8Array;
+  value: Uint8Array;
 }
 
 export interface KVBackend {
   put(entries: KVEntry[]): MaybePromise<void>;
-  get(key: Buffer): MaybePromise<Buffer>;
-  getAll(keys: Buffer[]): MaybePromise<Buffer>;
-  getPointer(): MaybePromise<Buffer>;
-}
-
-export interface DBHead {
-  backend: KVBackend;
-  getIndexKey: (key: DataIndex) => MaybePromise<Buffer>;
-  setIndexKey: (key: DataIndex, value: Buffer) => MaybePromise<DBHead>;
+  get(key: Uint8Array): MaybePromise<Uint8Array | null>;
+  getAll(keys: Uint8Array[]): MaybePromise<(Uint8Array | null)[]>;
+  getPointer(): MaybePromise<Uint8Array>;
 }
 
 export interface IndexComparator {
@@ -76,16 +81,18 @@ export interface IndexComparator {
 }
 
 export interface Indexer {
+  entityId(): UINT64;
+
   writeDatoms(
     backend: KVBackend,
     comparator: IndexComparator,
-    pointer: Buffer | null,
+    pointer: Uint8Array | null,
     sortedDatoms: Datom[]
-  ): MaybePromise<Buffer>;
+  ): MaybePromise<Uint8Array>;
 
   getNode(
     backend: KVBackend,
     comparator: IndexComparator,
-    pointer: Buffer
+    pointer: Uint8Array
   ): MaybePromise<IndexNode | DataNode>;
 }

@@ -1,15 +1,31 @@
-import { DataIndex, Datom, Indexer } from "@/types";
+import { DataIndex, Datom, IndexComparator } from "@/types";
 
-const typeOrder = ["bigint", "number", "string", "boolean", "object"];
+const typeOrder = ["number", "bigint", "string", "boolean", "object"];
 type CompareNumber = 0 | -1 | 1;
 
 const compare = (a: any, b: any): CompareNumber => {
-  if (typeof a !== typeof b) {
-    return compare(typeOrder.indexOf(a), typeOrder.indexOf(b));
-  }
-
   if (a === b) {
     return 0;
+  }
+
+  if (a === Infinity) {
+    return 1;
+  }
+
+  if (b === Infinity) {
+    return -1;
+  }
+
+  if (a === -Infinity) {
+    return -1;
+  }
+
+  if (b === -Infinity) {
+    return 1;
+  }
+
+  if (typeof a !== typeof b) {
+    return compare(typeOrder.indexOf(a), typeOrder.indexOf(b));
   }
 
   if (typeof a === "string") {
@@ -44,34 +60,34 @@ class DataIndexer {
   }
 }
 
-const indexers: Indexer[] = [];
+const comparators: IndexComparator[] = [];
 
-indexers[DataIndex.EAVT] = new DataIndexer(DataIndex.EAVT, [
+comparators[DataIndex.EAVT] = new DataIndexer(DataIndex.EAVT, [
   "e",
   "a",
   "v",
   "t",
 ]);
 
-indexers[DataIndex.VAET] = new DataIndexer(DataIndex.EAVT, [
+comparators[DataIndex.AVET] = new DataIndexer(DataIndex.AVET, [
+  "a",
+  "v",
+  "e",
+  "t",
+]);
+
+comparators[DataIndex.AEVT] = new DataIndexer(DataIndex.AEVT, [
+  "a",
+  "e",
+  "v",
+  "t",
+]);
+
+comparators[DataIndex.VAET] = new DataIndexer(DataIndex.VAET, [
   "v",
   "a",
   "e",
   "t",
 ]);
 
-indexers[DataIndex.EAVT] = new DataIndexer(DataIndex.EAVT, [
-  "e",
-  "a",
-  "v",
-  "t",
-]);
-
-indexers[DataIndex.VAET] = new DataIndexer(DataIndex.EAVT, [
-  "v",
-  "a",
-  "e",
-  "t",
-]);
-
-export { indexers };
+export { comparators };

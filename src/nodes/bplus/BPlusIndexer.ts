@@ -1,5 +1,3 @@
-import { chain } from "@/async";
-import { BPlusNode } from "@/generated/protocolBuffers";
 import {
   Datom,
   IndexComparator,
@@ -7,8 +5,13 @@ import {
   KVBackend,
   NodeType,
   Pointer,
+  UINT64,
 } from "@/types";
-import { BPlusDataNode, BPlusIndexNode } from "./BPlusNode";
+import { BPlusDataNode, BPlusIndexNode, toBigInt } from "./BPlusNode";
+import { BPlusNode, Datom as DatomData } from "@/generated/protocolBuffers";
+import { chain } from "@/async";
+import * as crypto from "crypto";
+import Long from "long";
 
 class BPlusIndexContext {
   constructor(
@@ -29,8 +32,8 @@ const combineSorted = <T>(
   let combined: T[] = [];
 
   while (true) {
-    const aEnded = aIndex === a.length - 1;
-    const bEnded = bIndex === b.length - 1;
+    const aEnded = aIndex === a.length;
+    const bEnded = bIndex === b.length;
 
     if (aEnded && bEnded) {
       return combined;
@@ -38,6 +41,7 @@ const combineSorted = <T>(
 
     if (aEnded) {
       combined.push(...b.slice(bIndex));
+
       return combined;
     }
 
@@ -51,10 +55,10 @@ const combineSorted = <T>(
     const compared = indexer.compare(aDatom, bDatom);
 
     if (compared === 1) {
-      combined.push(b[aIndex]);
+      combined.push(b[bIndex]);
       bIndex += 1;
     } else if (compared === -1) {
-      combined.push(a[bIndex]);
+      combined.push(a[aIndex]);
       aIndex += 1;
     } else {
       combined.push(b[bIndex]);
@@ -91,7 +95,7 @@ const makeNodeFromPointers = async (
   await backend.put([
     {
       key: pointer,
-      value: Buffer.from(encoded.buffer),
+      value: encoded,
     },
   ]);
 
@@ -128,6 +132,29 @@ const makeNodesFromPointers = async (
   return [await makeNodeFromPointers(ctx, nodeData)];
 };
 
+const toLong = (int: UINT64) => {
+  return Long.fromString(int.toString());
+};
+
+const encodeValue = (value: any): ["string", string] => {
+  if (typeof value === "string") {
+    return ["string", value];
+  }
+
+  throw new Error(`cannot encode datom value ${typeof value}`);
+};
+
+const toProtoDatom = (data: Datom) => {
+  const [valueFieldName, encodedValue] = encodeValue(data.v);
+
+  return DatomData.create({
+    e: toLong(data.e!),
+    a: toLong(data.a!),
+    t: toLong(data.t!),
+    [valueFieldName]: encodedValue,
+  });
+};
+
 const makeDataNodePointer = async (
   { backend }: BPlusIndexContext,
   nodeData: Datom[]
@@ -136,13 +163,15 @@ const makeDataNodePointer = async (
     throw new Error("cannot create BPlusNode with no pointers");
   }
 
-  const encoded = BPlusNode.encode({ data: { data: nodeData } }).finish();
+  const encoded = BPlusNode.encode({
+    data: { data: nodeData.map((value) => toProtoDatom(value)) },
+  }).finish();
   const pointer = await backend.getPointer();
 
   await backend.put([
     {
       key: pointer,
-      value: Buffer.from(encoded.buffer),
+      value: encoded,
     },
   ]);
 
@@ -256,13 +285,28 @@ const writeIndex = async (
   );
 };
 
+const abs = (value: bigint) => {
+  if (value > 0n) {
+    return value;
+  }
+
+  return -1n * value;
+};
+
 export class BPlusIndexer implements Indexer {
-  constructor(private branchingFactor: number = 10) {}
+  constructor(private branchingFactor: number) {}
+
+  entityId() {
+    const bytes = crypto.randomBytes(8);
+    const bigIntArr = new BigInt64Array(bytes.buffer);
+
+    return abs(bigIntArr[0]);
+  }
 
   async writeDatoms(
     backend: KVBackend,
     comparator: IndexComparator,
-    pointer: Buffer | null,
+    pointer: Uint8Array | null,
     sortedDatoms: Datom[]
   ) {
     const ctx = new BPlusIndexContext(
@@ -294,15 +338,24 @@ export class BPlusIndexer implements Indexer {
   async getNode(
     backend: KVBackend,
     comparator: IndexComparator,
-    pointer: Buffer
+    pointer: Uint8Array
   ) {
     const data = await backend.get(pointer);
-    const result = BPlusNode.decode(data);
+
+    if (data == null) {
+      throw new Error("could not find node");
+    }
+
+    const result = BPlusNode.decode(new Uint8Array(data));
 
     if (result.index) {
       return new BPlusIndexNode(backend, comparator, result.index);
     }
 
-    return new BPlusDataNode(result.data);
+    return new BPlusDataNode(comparator, result.data);
   }
 }
+
+export const makeBPlusIndexer = (branchingFactor: number = 10) => {
+  return new BPlusIndexer(branchingFactor);
+};

@@ -1,34 +1,66 @@
 import { chain } from "@/async";
 import {
+  BPlusDataNodeData,
+  BPlusIndexNodeData,
+  Datom as DatomData,
+} from "@/generated/protocolBuffers";
+import {
   DataNode,
   Datom,
-  DBHead,
   IndexComparator,
   IndexNode,
   KVBackend,
   NodeType,
   Pointer,
 } from "@/types";
-import {
-  BPlusIndexNodeData,
-  BPlusDataNodeData,
-  Datom as DatomData,
-} from "generated/protocolBuffers";
+
+export const toBigInt = (value: Long) => {
+  return BigInt(value.toString());
+};
 
 const toDatom = (value: DatomData) => {
-  return new Datom(value.e, value.a, value.v, value.t);
+  return new Datom(
+    toBigInt(value.e),
+    toBigInt(value.a),
+    (value as any)[value.v as any],
+    toBigInt(value.t)
+  );
 };
 
 export class BPlusDataNode implements DataNode {
   type = NodeType.data as NodeType.data;
   private datoms: Datom[] = [];
 
-  constructor(data: BPlusDataNodeData) {
+  constructor(private comparator: IndexComparator, data: BPlusDataNodeData) {
     this.datoms = data.data.map((value) => toDatom(value));
   }
 
-  getData() {
-    return this.datoms;
+  getData(start?: Datom, end?: Datom) {
+    const { datoms, comparator } = this;
+
+    if (start == null && end == null) {
+      return datoms;
+    }
+
+    let result = datoms;
+
+    if (start != null) {
+      const pivot = result.findIndex(
+        (datom) => comparator.compare(datom, start) >= 0
+      );
+
+      result = pivot === -1 ? [] : result.slice(pivot);
+    }
+
+    if (end != null) {
+      const pivot = result.findIndex(
+        (datom) => comparator.compare(datom, end) === 1
+      );
+
+      result = pivot === -1 ? result : result.slice(0, pivot);
+    }
+
+    return result;
   }
 }
 
@@ -73,8 +105,8 @@ export class BPlusIndexNode implements IndexNode {
     const { backend, data, indexer } = this;
     const { pointer } = data.pointers[index];
 
-    return chain(backend.get(pointer), (value: Buffer) => {
-      const data = BPlusIndexNodeData.decode(value);
+    return chain(backend.get(pointer), (value: Uint8Array | null) => {
+      const data = BPlusIndexNodeData.decode(value!);
       return new BPlusIndexNode(backend, indexer, data);
     });
   }

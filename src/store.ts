@@ -1,5 +1,5 @@
-import { Datom, DB } from "./types";
+import { Datom, Snapshot } from "./types";
 
-export const writeDatoms = (db: DB, values: Datom[]) => {
+export const writeDatoms = (db: Snapshot, values: Datom[]) => {
   return db.writeDatoms(values);
 };
